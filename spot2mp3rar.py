@@ -9,8 +9,8 @@ import spotipy.oauth2 as oauth2
 from youtube_search import YoutubeSearch
 
 # Spotify API credentials
-SPOTIPY_CLIENT_ID = '729ef530f0e749679b635f56bbd15663'
-SPOTIPY_CLIENT_SECRET = '73e8b1db2e2c4e0cb09b052c31304918'
+SPOTIPY_CLIENT_ID = 'Enter your own'
+SPOTIPY_CLIENT_SECRET = 'Enter your own'
 
 class SpotifyToMP3Converter:
     def __init__(self, master):
