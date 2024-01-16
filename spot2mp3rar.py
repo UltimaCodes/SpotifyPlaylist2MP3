@@ -1,21 +1,27 @@
 import os
 import tkinter as tk
 from tkinter import ttk, filedialog
+from tkinter.scrolledtext import ScrolledText
 import shutil
 import re
 from pytube import YouTube
 import spotipy
 import spotipy.oauth2 as oauth2
 from youtube_search import YoutubeSearch
+import ttkthemes
 
 # Spotify API credentials
-SPOTIPY_CLIENT_ID = 'Enter your own'
-SPOTIPY_CLIENT_SECRET = 'Enter your own'
+SPOTIPY_CLIENT_ID = '...'
+SPOTIPY_CLIENT_SECRET = '...'
 
 class SpotifyToMP3Converter:
     def __init__(self, master):
         self.master = master
         self.master.title("Spotify to MP3 Converter")
+
+        # Use themed UI
+        self.style = ttkthemes.ThemedStyle(master)
+        self.style.set_theme("plastik")
 
         self.playlist_label = ttk.Label(master, text="Spotify Playlist URL:")
         self.playlist_label.grid(row=0, column=0, pady=5, sticky="w")
@@ -32,9 +38,9 @@ class SpotifyToMP3Converter:
         self.output_button = ttk.Button(master, text="Browse", command=self.browse_folder)
         self.output_button.grid(row=1, column=2, pady=5, padx=5)
 
-        self.output_text_var = tk.StringVar()
-        self.output_text = ttk.Label(master, textvariable=self.output_text_var, wraplength=400)
-        self.output_text.grid(row=2, column=0, columnspan=3, pady=5)
+        # Add download status area
+        self.status_text = ScrolledText(master, height=8, wrap=tk.WORD, state=tk.DISABLED)
+        self.status_text.grid(row=2, column=0, columnspan=3, pady=5)
 
         self.start_button = ttk.Button(master, text="Start Conversion", command=self.start_conversion)
         self.start_button.grid(row=3, column=0, columnspan=3, pady=10)
@@ -71,17 +77,18 @@ class SpotifyToMP3Converter:
         output_folder = self.output_entry.get()
 
         if not playlist_url or not output_folder:
-            self.output_text_var.set("Please fill in both fields.")
+            self.update_status("Please fill in both fields.")
             return
 
         youtube_links = self.get_youtube_links(playlist_url)
         mp3_files = []
 
-        for link_info in youtube_links:
+        for i, link_info in enumerate(youtube_links, start=1):
             link = link_info['link']
             title = link_info['title']
 
             try:
+                self.update_status(f"Downloading {i}/{len(youtube_links)}: {title}")
                 mp3_file = self.download_video(link, title, output_folder)
                 if mp3_file:
                     mp3_files.append(mp3_file)
@@ -89,10 +96,10 @@ class SpotifyToMP3Converter:
                 print(f"Error processing {link}: {e}")
 
         if mp3_files:
-            self.output_text_var.set(f"MP3 files saved in '{output_folder}'.")
+            self.update_status(f"Conversion completed. MP3 files saved in '{output_folder}'.")
             print("Conversion completed.")
         else:
-            self.output_text_var.set("No valid audio files found.")
+            self.update_status("No valid audio files found.")
             print("No valid audio files found.")
 
     def extract_playlist_id(self, playlist_url):
@@ -103,13 +110,13 @@ class SpotifyToMP3Converter:
         playlist_id = self.extract_playlist_id(playlist_url)
 
         if not playlist_id:
-            print("Invalid playlist URL.")
+            self.update_status("Invalid playlist URL.")
             return []
 
         try:
             playlist = self.spotify.playlist_tracks(playlist_id)
         except Exception as e:
-            print(f"Error retrieving playlist information: {e}")
+            self.update_status(f"Error retrieving playlist information: {e}")
             return []
 
         youtube_links = []
@@ -124,9 +131,14 @@ class SpotifyToMP3Converter:
                     video_url = f"https://www.youtube.com{search_results[0]['url_suffix']}"
                     youtube_links.append({'link': video_url, 'title': f"{artist} - {song_name}"})
             except Exception as e:
-                print(f"Error searching for video: {e}")
+                self.update_status(f"Error searching for video: {e}")
 
         return youtube_links
+
+    def update_status(self, message):
+        self.status_text.config(state=tk.NORMAL)
+        self.status_text.insert(tk.END, message + "\n")
+        self.status_text.config(state=tk.DISABLED)
 
 if __name__ == "__main__":
     root = tk.Tk()
